@@ -210,7 +210,14 @@ def stringProcessDelimited(line, delimiter=None):
     return vals
 
 
-def str_from_unicode(a):
+def stringToFile(filename, data):
+    out = openTextFileWrite(filename, 0)
+    if out is not None:
+        out.write(data)
+        out.close()
+
+
+def stringFromUnicode(a):
     val = ''
     a_len = len(a)
     if a_len == 0:
@@ -221,7 +228,6 @@ def str_from_unicode(a):
         else:
             val += '.'
     return val
-
 
 
 class FileWerks:
