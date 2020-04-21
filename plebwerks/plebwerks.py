@@ -5,6 +5,7 @@ import os.path
 import stat
 import time
 import hashlib
+import yaml
 from types import *
 
 # simple text and string processing functions, e.g. PlebWerks
@@ -209,6 +210,20 @@ def stringProcessDelimited(line, delimiter=None):
     return vals
 
 
+def str_from_unicode(a):
+    val = ''
+    a_len = len(a)
+    if a_len == 0:
+        return a
+    for i in range(0, a_len):
+        if ord(a[i]) < 128:
+            val += a[i]
+        else:
+            val += '.'
+    return val
+
+
+
 class FileWerks:
     def __init__(self, fileName):
         self.filePath = fileName
@@ -278,6 +293,8 @@ class FileWerks:
             vals = stringProcessDelimited(line, delimiter)
             if first_row is None:
                 first_row = vals
+                for i in range(0, len(first_row)):
+                    first_row[i] = str_from_unicode(first_row[i])
                 num_cols = len(first_row)
             else:
                 if len(vals) == num_cols:
@@ -287,11 +304,13 @@ class FileWerks:
                         row[first_row[i]] = vals[i]
                     rows.append(row)
                 else:
-                    #print 'not same column count {0} vs {1}'.format(len(vals), num_cols)
-                    i = 0
-                    for a in vals:
-                        print '{0} [{1}]'.format(i, a)
-                        i += 1
+                    if 0:
+                        print 'not same column count {0} vs {1}'.format(len(vals), num_cols)
+                        i = 0
+                        for a in vals:
+                            print '{0} [{1}]'.format(i, a)
+                            i += 1
+                    pass
         return rows
 
 
@@ -317,6 +336,25 @@ def dictGetValue(d, key):
     return None
 
 
+def yamlRead(yamlPath):
+    if os.path.exists(yamlPath):
+        yfile = FileWerks(yamlPath)
+        return yaml.load(yfile.getContents())
+
+
+def yamlWrite(yamlPath, dobj):
+    if isinstance(dobj, dict):
+        out = openTextFileWrite(yamlPath, 0)
+        if out is not None:
+            yaml.dump(dobj, out, default_flow_style=False)
+            out.close()
+    elif isinstance(dobj, list):
+        out = openTextFileWrite(yamlPath, 0)
+        if out is not None:
+            yaml.dump(dobj, out, default_flow_style=False)
+            out.close()
+
+
 def timeNow(gimmeInt=False):
     if gimmeInt is True:
         return int(time.time())
@@ -332,7 +370,6 @@ def listContains(l, a):
 
 
 def listAdd(l, a):
-    matched = False
     for v in l:
         if stringMatch(v, a):
             return l
