@@ -5,14 +5,23 @@ import os.path
 import stat
 import time
 import hashlib
+import yaml
 from types import *
 
 # simple text and string processing functions, e.g. PlebWerks
 
-def openTextFileRead(fpath):
+def openTextFileRead(fpath, encoding='ascii'):
     if os.path.isfile(fpath):
-        return open(fpath, 'r')
+        return open(fpath, mode='r', encoding=encoding)
     return None
+
+
+def isStringType(value):
+    #if isinstance(value, unicode):
+    #    return True
+    if isinstance(value, str):
+        return True
+    return False
 
 
 def stringStripStart(a, m):
@@ -93,33 +102,15 @@ def stringClean(a):
 
 
 def stringMatch(a, m):
-    if type(a) is StringType:
-        pass
-    elif type(a) is UnicodeType:
+    if isStringType(a) is True:
         pass
     else:
         return False
-    if type(m) is StringType:
-        pass
-    elif type(m) is UnicodeType:
+    if isStringType(m) is True:
         pass
     else:
         return False
-
-    #if a is None and m is not None:
-    #    return False
-    #elif m is None and a is not None:
-    #    return False
-
-    len_a = len(a)
-    len_m = len(m)
-    #print len_a
-    #print len_m
-    #for b in a:
-    #    print b
-    #    print ord(b)
-    #print len_m
-    if len_m != len_a:
+    if len(m) != len(a):
         return False
     if a == m:
         return True
@@ -209,6 +200,34 @@ def stringProcessDelimited(line, delimiter=None):
     return vals
 
 
+def stringToFile(filename, data, encoding='utf-8'):
+    out = openTextFileWrite(filename, 0, encoding)
+    if out is not None:
+        out.write(data)
+        out.close()
+
+
+def str_from_unicode(a):
+    val = ''
+    a_len = len(a)
+    if a_len == 0:
+        return a
+    for i in range(0, a_len):
+        if ord(a[i]) < 128:
+            val += a[i]
+        else:
+            val += '.'
+    return val
+
+
+def pathAssertExists(path):
+    if os.path.isdir(path):
+        pass
+    else:
+        os.makedirs(path)
+
+
+
 class FileWerks:
     def __init__(self, fileName):
         self.filePath = fileName
@@ -256,14 +275,24 @@ class FileWerks:
         return data
     
     def getLines(self):
+        encodings = []
+        listAdd(encodings, 'ascii')
+        listAdd(encodings, 'utf-8')
         lines = []
         data = None
         if self.isfile is True:
-            inf = openTextFileRead(self.filePath)
-            if inf is not None:
-                data = inf.readlines()
-                for line in data:
-                    lines.append(stringEndRemoveNewline(line))
+            for encoding in encodings:
+                #print(encoding)
+                if data is None:
+                    inf = openTextFileRead(self.filePath, encoding)
+                    if inf is not None:
+                        try:
+                            data = inf.readlines()
+                            for line in data:
+                                lines.append(stringEndRemoveNewline(line))
+                        except:
+                            #print('failed for encoding {0}'.format(encoding))
+                            pass
         return lines
     
     def getDelimitedLines(self, delimiter=None):
@@ -278,6 +307,8 @@ class FileWerks:
             vals = stringProcessDelimited(line, delimiter)
             if first_row is None:
                 first_row = vals
+                for i in range(0, len(first_row)):
+                    first_row[i] = str_from_unicode(first_row[i])
                 num_cols = len(first_row)
             else:
                 if len(vals) == num_cols:
@@ -287,11 +318,13 @@ class FileWerks:
                         row[first_row[i]] = vals[i]
                     rows.append(row)
                 else:
-                    #print 'not same column count {0} vs {1}'.format(len(vals), num_cols)
-                    i = 0
-                    for a in vals:
-                        print '{0} [{1}]'.format(i, a)
-                        i += 1
+                    #if 0:
+                        #print 'not same column count {0} vs {1}'.format(len(vals), num_cols)
+                        #i = 0
+                        #for a in vals:
+                        #    print '{0} [{1}]'.format(i, a)
+                        #    i += 1
+                    pass
         return rows
 
 
@@ -317,6 +350,25 @@ def dictGetValue(d, key):
     return None
 
 
+def yamlRead(yamlPath):
+    if os.path.exists(yamlPath):
+        yfile = FileWerks(yamlPath)
+        return yaml.load(yfile.getContents(), Loader=yaml.FullLoader)
+
+
+def yamlWrite(yamlPath, dobj):
+    if isinstance(dobj, dict):
+        out = openTextFileWrite(yamlPath, 0)
+        if out is not None:
+            yaml.dump(dobj, out, default_flow_style=False)
+            out.close()
+    elif isinstance(dobj, list):
+        out = openTextFileWrite(yamlPath, 0)
+        if out is not None:
+            yaml.dump(dobj, out, default_flow_style=False)
+            out.close()
+
+
 def timeNow(gimmeInt=False):
     if gimmeInt is True:
         return int(time.time())
@@ -332,7 +384,6 @@ def listContains(l, a):
 
 
 def listAdd(l, a):
-    matched = False
     for v in l:
         if stringMatch(v, a):
             return l
@@ -360,12 +411,12 @@ def openBinaryFileWrite(fpath):
     return open(fpath, 'wb')
 
 
-def openTextFileWrite(fpath, mode=None):
+def openTextFileWrite(fpath, mode=None, encoding='ascii'):
     if mode is None:
         mode = 0
     if mode == 1:
-        return open(fpath, 'a')
-    return open(fpath, 'w', mode)
+        return open(fpath, 'a', encoding=encoding)
+    return open(fpath, 'w', encoding=encoding)
 
 
 def charIsNewline(a):
